@@ -2,6 +2,8 @@
   (:require [clojure.test :refer :all]
             [functional-core-async.core :refer :all]))
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+;; TODD
+;; ====
+;; I'm working on it.
+;; Please take a look at `functional-core-async.examples` in the meanwhile.
+;; Or send some pull requests!

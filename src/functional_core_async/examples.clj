@@ -36,15 +36,15 @@
 ;; CHANNELS
 ;; ========
 (defn almost-async-ch []
-  (let [ch (chan)
-        _ (get-user-from-db :user1
-                            #(>! ch %))
-        _ (println "async :)")
-        _ (println "but blocks on accessing response :(")
-        resp (<! ch)
-        massaged-resp (seq resp)]
-    (println "via ch:" massaged-resp)
-    massaged-resp))
+  (let [ch (chan)]
+    (get-user-from-db :user1
+                      #(>! ch %))
+    (println "async :)")
+    (println "but blocks on accessing response :(")
+    (let [resp (<! ch)
+          massaged-resp (seq resp)]
+      (println "via ch:" massaged-resp)
+      massaged-resp)))
 
 
 ;; CHANNELS + GO BLOCK

@@ -49,14 +49,14 @@ which can be escaped with the help of those handy magic portals we talked about.
 ```clojure
 ;; from examples.clj
 (defn async-ch []
-  (let [ch (chan)
-        _ (get-user-from-db :user1
-                            #(>! ch %))
-        _ (println "but blocks on accessing response :(")
-        resp (<! ch)
-        massaged-resp (seq resp)]
-    (println "via ch:" massaged-resp)
-    massaged-resp))
+  (let [ch (chan)]
+    (get-user-from-db :user1
+                      #(>! ch %))
+    (println "but blocks on accessing response :(")
+    (let [resp (<! ch)
+          massaged-resp (seq resp)]
+      (println "via ch:" massaged-resp)
+      massaged-resp)))
 ```
 
 In this version, we have modified the callback to just put the response onto

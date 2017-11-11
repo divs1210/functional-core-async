@@ -13,8 +13,8 @@ The problem is that it is implemented using complex macros that are hard
 to understand and port to other systems. They also pose problems such as
 inability to work across fn-boundaries and non-composability.
 
-This is a minimal implementation using plain functions, a single threaded
-event loop, and atom-based queues.
+This is a minimal implementation using an event loop and functions,
+showcasing how something like `core.async` could work behind the scenes.
 
 ## Differences from `core.async`
 - implemented as functions, not macros

@@ -2,8 +2,27 @@
   (:require [clojure.test :refer :all]
             [functional-core-async.core :refer :all]))
 
-;; TODD
-;; ====
-;; I'm working on it.
-;; Please take a look at `functional-core-async.examples` in the meanwhile.
-;; Or send some pull requests!
+(deftest channel-test
+  (let [ch (chan)]
+    (>! ch 1)
+    (is (= 1 (<! ch))
+        "Channels block on write and read.")))
+
+
+(deftest scheduler-test
+  (let [ch (chan)]
+    (schedule-async #(inc 1)
+                    #(>! ch %))
+    (is (= 2 (<! ch))
+        "Channel should have return value.")))
+
+
+(deftest go-test
+  (let [ch (chan)
+        res (promise)]
+    (go (deliver res (<! ch)))
+    (>! ch 1)
+    (is (= 1 @res)
+        "go blocks should be async.")))
+
+;; NOTE: also check out `functional-core-async.examples`

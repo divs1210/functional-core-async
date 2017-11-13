@@ -9,20 +9,52 @@
   (LinkedList.))
 
 
-(defn >!
-  "Puts something on a channel. Thread safe."
-  [ch x]
+(defn chan-state
+  "Returns the state of the channel.
+  `:free` available to read/write
+  `:blocked` blocked on read
+  `:empty` available to write, but will block on read"
+  [ch]
   (locking ch
-    (.addLast ch x)))
+    (cond
+      (and (-> ch first map?)
+           (-> ch first ::ch-promise))
+      :blocked
+
+      (seq ch)
+      :free
+
+      :else
+      :empty)))
+
+
+(defn >!
+  "Puts something on a channel. Thread safe?"
+  [ch x]
+  (if (= :blocked (chan-state ch))
+    (let [p (-> ch first ::ch-promise)]
+      (if (realized? p)
+        (.addLast ch x)
+        (deliver p x)))
+    (.addLast ch x))
+  nil)
 
 
 (defn <!
-  "Gets something off a channel. Thread safe."
+  "Gets something off a channel. Thread safe?"
   [ch]
-  (if (locking ch (seq ch))
+  (case (chan-state ch)
+    :free
     (.pop ch)
+
+    :blocked
+    (let [res @(-> ch first ::ch-promise)]
+      (.pop ch)
+      res)
+
+    :empty
     (do
-      (Thread/sleep 1)
+      (.addLast ch {::ch-promise (promise)})
       (recur ch))))
 
 

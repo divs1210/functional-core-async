@@ -35,22 +35,20 @@
 (defonce ^:private async-executor
   (future    ;; single threaded
     (loop [] ;; event loop
-      (let [[f ok err] (<! async-ch)] ;; pick job if available
+      (let [[f ok] (<! async-ch)] ;; pick job if available
         (try
           (ok (f)) ;; execute job and call the `ok` callback with the result
           (catch Exception e
-            (when err     ;; if something went wrong and an error callback
-              (err e))))) ;; was provided, call it with the Exception
+            (.printStackTrace e)))) ;; log unhandled errors
       (recur))))
 
 
 (defn schedule-async
   "Puts a job on the asynchronous job queue.
   `f`: a 0-arity fn to be run asynchronously
-  `ok`: callback called with the result of (f)
-  `err`: optional callback called with the Exception"
-  [f ok & [err]]
-  (>! async-ch [f ok err])
+  `ok`: callback called with the result of (f)"
+  [f ok]
+  (>! async-ch [f ok])
   nil)
 
 

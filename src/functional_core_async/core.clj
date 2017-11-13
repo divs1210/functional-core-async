@@ -1,39 +1,29 @@
-(ns functional-core-async.core)
+(ns functional-core-async.core
+  (:import java.util.LinkedList))
 
 ;; CHANNELS
 ;; ========
 (defn chan
   "Returns a new unbounded channel."
   []
-  (atom []))
+  (LinkedList.))
 
 
 (defn >!
   "Puts something on a channel. Thread safe."
   [ch x]
-  (let [old-ch @ch
-        new-ch (if (seq old-ch)
-                 (conj old-ch x)
-                 [x])]
-    (if (compare-and-set! ch old-ch new-ch)
-      new-ch
-      (do
-        (Thread/sleep 1)
-        (recur ch x)))))
+  (locking ch
+    (.push ch x)))
 
 
 (defn <!
   "Gets something off a channel. Thread safe."
   [ch]
-  (let [old-ch @ch
-        new-ch (-> old-ch rest vec)
-        x (first old-ch)]
-    (if (and (seq old-ch)
-             (compare-and-set! ch old-ch new-ch))
-      x
-      (do
-        (Thread/sleep 1)
-        (recur ch)))))
+  (if (locking ch (seq ch))
+    (.pop ch)
+    (do
+      (Thread/sleep 1)
+      (recur ch))))
 
 
 ;; ASYNC EVENT LOOP

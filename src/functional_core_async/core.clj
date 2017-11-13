@@ -29,15 +29,20 @@
 
 
 (defn >!
-  "Puts something on a channel. Thread safe?"
+  "Puts x on the channel. Thread safe?"
   [ch x]
-  (if (= :blocked (chan-state ch))
-    (let [p (-> ch first ::ch-promise)]
-      (if (realized? p)
-        (.addLast ch x)
-        (deliver p x)))
-    (.addLast ch x))
-  nil)
+  (cond
+    ;; not blocked
+    (not= (chan-state ch) :blocked)
+    (.addLast ch x)
+
+    ;; blocked on read
+    (-> ch first ::ch-promise realized? not)
+    (-> ch first ::ch-promise (deliver x))
+
+    ;; blocked on read, but free to write
+    :else
+    (.addLast ch x)))
 
 
 (defn <!
@@ -54,8 +59,8 @@
 
     :empty
     (do
-      (.addLast ch {::ch-promise (promise)})
-      (recur ch))))
+      (.push ch {::ch-promise (promise)})
+      (recur ch)))) ;; goto :blocked case
 
 
 ;; ASYNC EVENT LOOP

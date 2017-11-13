@@ -13,7 +13,7 @@
   "Puts something on a channel. Thread safe."
   [ch x]
   (locking ch
-    (.push ch x)))
+    (.addLast ch x)))
 
 
 (defn <!

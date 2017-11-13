@@ -93,6 +93,19 @@ We can then call `(<! c)` on that channel to get `massaged-resp`.
 So now we have sequential code instead of nested hell while
 being fully async!
 
+## Features
+
+* single threaded event loop
+* unbounded channels
+* `>!` and `<!` functions that work everywhere
+* `go` macro (and `go*` fn) that executes its body on the event thread 
+
+## TODO
+
+* bounded channels
+* preserve thread-local bindings in `go` blocks
+* alts!
+
 ## License
 
 Copyright © 2017 Divyansh Prakash

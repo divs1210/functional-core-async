@@ -1,6 +1,6 @@
 # functional-core-async
 
-A *tiny*, *simple*, *functional* implementation of CSP in Clojure.
+A *tiny*, *simple*, *functional* implementation of the meat of core.async.
 
 ## Why
 

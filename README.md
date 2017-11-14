@@ -17,10 +17,10 @@ This is a minimal implementation using an event loop and functions,
 showcasing how something like `core.async` could work behind the scenes.
 
 ## Differences from `core.async`
-- implemented as functions, not macros
-- `(>! c 1)` channels are unbounded, ie. infinite buffer
-- `(<! c)` blocks when channel is empty
+- `>!` and `<!` are implemented as functions and play nicely with the rest of Clojure
 - `>!!` and `<!!` don't exist - the single bang versions work outside `go` blocks too
+- `go` blocks (lightweight 'threads') are multiplexed over a single actual thread (don't
+make blocking calls inside them - use `future`s instead)
 
 ## Usage
 
@@ -93,16 +93,8 @@ We can then call `(<! c)` on that channel to get `massaged-resp`.
 So now we have sequential code instead of nested hell while
 being fully async!
 
-## Features
-
-* single threaded event loop
-* unbounded channels
-* `>!` and `<!` functions that work everywhere
-* `go` macro (and `go*` fn) that executes its body on the event thread 
-
 ## TODO
 
-* bounded channels
 * preserve thread-local bindings in `go` blocks
 * alts!
 

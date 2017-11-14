@@ -1,72 +1,31 @@
 (ns functional-core-async.core
-  (:import java.util.LinkedList))
+  (:import java.util.concurrent.ArrayBlockingQueue))
 
 ;; CHANNELS
 ;; ========
 (defn chan
-  "Returns a new unbounded channel."
-  []
-  (LinkedList.))
-
-
-(defn chan-state
-  "Returns the state of the channel.
-  `:free` available to read/write
-  `:blocked` blocked on read
-  `:empty` available to write, but will block on read"
-  [ch]
-  (locking ch
-    (cond
-      (and (-> ch first map?)
-           (-> ch first ::ch-promise))
-      :blocked
-
-      (seq ch)
-      :free
-
-      :else
-      :empty)))
+  "Returns a new channel."
+  ([] (chan 1 false))
+  ([n fifo?] (ArrayBlockingQueue. n fifo?)))
 
 
 (defn >!
-  "Puts x on the channel. Thread safe?"
-  [ch x]
-  (cond
-    ;; not blocked
-    (not= (chan-state ch) :blocked)
-    (.addLast ch x)
-
-    ;; blocked on read
-    (-> ch first ::ch-promise realized? not)
-    (-> ch first ::ch-promise (deliver x))
-
-    ;; blocked on read, but free to write
-    :else
-    (.addLast ch x)))
+  "Puts x on the channel. Thread safe."
+  [^ArrayBlockingQueue ch x]
+  (.put ch x))
 
 
 (defn <!
-  "Gets something off a channel. Thread safe?"
-  [ch]
-  (case (chan-state ch)
-    :free
-    (.pop ch)
-
-    :blocked
-    (let [res @(-> ch first ::ch-promise)]
-      (.pop ch)
-      res)
-
-    :empty
-    (do
-      (.push ch {::ch-promise (promise)})
-      (recur ch)))) ;; goto :blocked case
+  "Gets something off a channel. Thread safe."
+  [^ArrayBlockingQueue ch]
+  (.take ch))
 
 
 ;; ASYNC EVENT LOOP
 ;; ================
 (defonce ^:private async-ch
-  (chan))
+  ;; 1M `go` blocks at a time
+  (chan 1000000 false))
 
 
 (defonce ^:private async-executor

@@ -19,8 +19,7 @@ showcasing how something like `core.async` could work behind the scenes.
 ## Differences from `core.async`
 - `>!` and `<!` are implemented as functions and play nicely with the rest of Clojure
 - `>!!` and `<!!` don't exist - the single bang versions work outside `go` blocks too
-- `go` blocks (lightweight 'threads') are multiplexed over a single actual thread (don't
-make blocking calls inside them - use `future`s instead)
+- `go` blocks (lightweight 'threads') are multiplexed over a single JVM thread
 
 ## Usage
 
@@ -93,10 +92,26 @@ We can then call `(<! c)` on that channel to get `massaged-resp`.
 So now we have sequential code instead of nested hell while
 being fully async!
 
+## Notes
+
+Because `go` blocks are multiplexed onto a single real thread,
+calling blocking calls inside them is not a good idea as they may
+block other `go`s.
+
+To make concurrent blocking calls, such as network calls or heavy
+computations, use `thread` blocks that run their bodies inside
+Clojure `future`s (JVM threads).
+
+```clojure
+(def ch
+  (thread (blocking-call)))
+```
+
 ## TODO
 
 * preserve thread-local bindings in `go` blocks
 * alts!
+* unify `go` and `thread` (smart scheduling)
 
 ## License
 

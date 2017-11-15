@@ -48,6 +48,8 @@
   nil)
 
 
+;; Lightweight 'Threads'
+;; =====================
 (defn go*
   "Evaluates (f) on the `async-executor` thread,
   returning a channel that gives the returned value."
@@ -62,5 +64,25 @@
   returning a channel that gives the returned value."
   [& body]
   `(go*
+    (fn []
+      ~@body)))
+
+
+;; Real Threads
+;; ============
+(defn thread*
+  "Evaluates (f) on a separate thread, returning
+  a channel that gives the returned value."
+  [f]
+  (let [ch (chan)]
+    (future (>! ch (f)))
+    ch))
+
+
+(defmacro thread
+  "Executes the body on a separate thread, returning 
+  a channel that gives the returned value."
+  [& body]
+  `(thread*
     (fn []
       ~@body)))

@@ -9,12 +9,10 @@ A *tiny*, *simple*, *functional* implementation of the meat of core.async.
 It makes writing concurrent software much simpler by getting data out
 of callbacks through the use of magic portals called `channels`.
 
-The problem is that it is implemented using complex macros that are hard
-to understand and port to other systems. They also pose problems such as
-inability to work across fn-boundaries and non-composability.
+The problem is that it is implemented using unwieldy macros, posing problems such as
+inability to work across fn-boundaries, leading to subtle bugs.
 
-This is a minimal implementation using an event loop and functions,
-showcasing how something like `core.async` could work behind the scenes.
+This is a minimal implementation using an event loop and functions.
 
 ## Differences from `core.async`
 - `>!` and `<!` are implemented as functions and play nicely with the rest of Clojure
@@ -92,7 +90,7 @@ We can then call `(<! c)` on that channel to get `massaged-resp`.
 So now we have sequential code instead of nested hell while
 being fully async!
 
-## Notes
+## NOTE
 
 Because `go` blocks are multiplexed onto a single real thread,
 calling blocking calls inside them is not a good idea as they may
@@ -110,7 +108,7 @@ Clojure `future`s (JVM threads).
 ## TODO
 
 * preserve thread-local bindings in `go` blocks
-* alts!
+* implement `alts!`
 * unify `go` and `thread` (smart scheduling)
 
 ## License

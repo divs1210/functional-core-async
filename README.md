@@ -1,23 +1,27 @@
 # functional-core-async
 
-A *tiny*, *simple*, *functional* implementation of the meat of core.async.
+A *tiny*, *simple*  implementation of the meat of core.async.
+
+'functional' as in 'it works!' 😀
 
 ## Why
 
 [core.async](https://github.com/clojure/core.async) is a great tool.
 
 It makes writing concurrent software much simpler by getting data out
-of callbacks through the use of magic portals called `channels`.
+of callbacks through the use of magic portals called `channels`. This
+is a minimal implementation using an event loop and functions.
 
-The problem is that it is implemented using unwieldy macros, posing problems such as
-inability to work across fn-boundaries, leading to subtle bugs.
-
-This is a minimal implementation using an event loop and functions.
+**NOTE:** This is an experimental project through which I want to explore
+how machinery like `core.async` can be implemented. Read more
+[here](https://groups.google.com/forum/#!topic/clojure/1wmblSTtw2w).
 
 ## Differences from `core.async`
 - `>!` and `<!` are implemented as functions and play nicely with the rest of Clojure
 - `>!!` and `<!!` don't exist - the single bang versions work outside `go` blocks too
-- `go` blocks (lightweight 'threads') are multiplexed over a single JVM thread
+- `go` blocks (lightweight 'threads') are multiplexed over a single JVM thread, but are
+promoted to real JVM threads if they don't complete within 10ms
+- `thread` does not exist because `go` blocks are autopromoted
 
 ## Usage
 
@@ -90,26 +94,10 @@ We can then call `(<! c)` on that channel to get `massaged-resp`.
 So now we have sequential code instead of nested hell while
 being fully async!
 
-## NOTE
-
-Because `go` blocks are multiplexed onto a single real thread,
-calling blocking calls inside them is not a good idea as they may
-block other `go`s.
-
-To make concurrent blocking calls, such as network calls or heavy
-computations, use `thread` blocks that run their bodies inside
-Clojure `future`s (JVM threads).
-
-```clojure
-(def ch
-  (thread (blocking-call)))
-```
-
 ## TODO
 
 * preserve thread-local bindings in `go` blocks
 * implement `alts!`
-* unify `go` and `thread` (smart scheduling)
 
 ## License
 

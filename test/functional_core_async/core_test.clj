@@ -6,7 +6,12 @@
   (let [ch (chan)]
     (>! ch 1)
     (is (= 1 (<! ch))
-        "Channels block on write and read.")))
+        "Channels block on write and read.")
+
+    (close! ch)
+    (>! ch 2)
+    (is (= nil (<! ch))
+        "Closed channels ignore puts and return nil on take.")))
 
 
 (deftest scheduler-test

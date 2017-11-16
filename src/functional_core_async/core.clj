@@ -1,24 +1,45 @@
 (ns functional-core-async.core
+  (:require [functional-core-async.protocols :as p])
   (:import java.util.concurrent.ArrayBlockingQueue))
 
 ;; CHANNELS
 ;; ========
 (defn chan
   "Returns a new channel."
-  ([] (chan 1 false))
-  ([n fifo?] (ArrayBlockingQueue. n fifo?)))
+  ([] (chan 1))
+  ([n] (chan n true))
+  ([n fifo?]
+   (let [ch (ArrayBlockingQueue. n fifo?)
+         open? (atom true)]
+     (reify
+       clojure.lang.ISeq
+       (seq [_]
+         (seq ch))
+       p/IBufferedChannel
+       (take! [_]
+         (when (or (seq ch) @open?)
+           (let [res (.take ch)]
+             (when (not= res ::closed)
+               res))))
+       (put! [_ x]
+         (when (and x @open?)
+           (.put ch x)))
+       (close! [_]
+         (when @open?
+           (.put ch ::closed)
+           (reset! open? false))
+         nil)))))
 
 
-(defn >!
-  "Puts x on the channel. Thread safe."
-  [^ArrayBlockingQueue ch x]
-  (.put ch x))
+(def ^{:doc "Gets something off a channel. Thread safe, blocking."}
+  <! p/take!)
 
+(def ^{:doc "Puts something on a channel. Thread safe, blocking."}
+  >! p/put!)
 
-(defn <!
-  "Gets something off a channel. Thread safe."
-  [^ArrayBlockingQueue ch]
-  (.take ch))
+(def ^{:doc "All further puts will be ignored, takes will return nil.
+Thread safe, blocking."}
+  close! p/close!)
 
 
 ;; ASYNC EVENT LOOP

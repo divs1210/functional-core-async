@@ -21,7 +21,9 @@ how machinery like `core.async` can be implemented. Read more
 - `>!!` and `<!!` don't exist - the single bang versions work outside `go` blocks too
 - `go` blocks (lightweight 'threads') are multiplexed over a single JVM thread, but are
 promoted to real JVM threads if they don't complete within 10ms
-- `thread` does not exist because `go` blocks are autopromoted
+- `thread` blocks don't exist because `go` blocks are autopromoted
+- there are cases where `core.async` can run two `go` blocks on the same thread, while
+this implementation will have to move one of them to another thread ([more](https://github.com/divs1210/functional-core-async/issues/1))
 
 ## Usage
 
@@ -93,6 +95,48 @@ immediately returning a channel.
 We can then call `(<! c)` on that channel to get `massaged-resp`.
 So now we have sequential code instead of nested hell while
 being fully async!
+
+## The Hot Dog Machine Process You’ve Been Longing For
+
+Here's a port of the [Hot Dog Machine](https://www.braveclojure.com/core-async/)
+
+```clojure
+(defn hot-dog-machine-v2
+  [hot-dog-count]
+  (let [in (chan)
+        out (chan)]
+    (go (loop [hc hot-dog-count]
+          (if (> hc 0)
+            (let [input (<! in)]
+             (if (= 3 input)
+                (do (>! out "hot dog")
+                    (recur (dec hc)))
+                (do (>! out "wilted lettuce")
+                    (recur hc))))
+           (do (close! in)
+               (close! out)))))
+    [in out]))
+```
+
+Let's give it a try:
+```clojure
+(let [[in out] (hot-dog-machine-v2 2)]
+  (>! in "pocket lint")
+  (println (<! out))
+
+  (>! in 3)
+  (println (<! out))
+
+  (>! in 3)
+  (println (<! out))
+
+  (>! in 3)
+  (<! out))
+; => wilted lettuce
+; => hotdog
+; => hotdog
+; => nil
+```
 
 ## TODO
 

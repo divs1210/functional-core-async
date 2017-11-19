@@ -1,5 +1,5 @@
 (ns functional-core-async.core
-  (:import java.util.concurrent.ArrayBlockingQueue))
+  (:import [java.util.concurrent ArrayBlockingQueue TimeUnit]))
 
 ;; CHANNELS
 ;; ========
@@ -114,3 +114,38 @@
   `(go*
     (fn []
       ~@body)))
+
+
+;; ALTS!
+;; =====
+(defn ^:private poll!
+  [{:keys [^ArrayBlockingQueue ch open?]} microseconds]
+  (when @open?
+    (let [res (.poll ch microseconds TimeUnit/MICROSECONDS)]
+      (when (not= res ::closed)
+        res))))
+
+
+(defn select!
+  "Listens on a bunch of channels, and returns
+  [ch val] for the first thing that arrives."
+  [chans]
+  (let [p (promise)]
+    (doseq [ch (cycle chans)
+            :while (not (realized? p))
+            :let [res (poll! ch 10)]]
+      (when res
+        (deliver p [ch res])))
+    @p))
+
+
+(defn alts!
+  "Takes a map of channels -> functions.
+  Listens on channels, and if a value `val`
+  is recieved on some `ch`, calls (`f` `val`)
+  with the corresponding function `f`."
+  [chan-fn-map]
+  (let [chans (keys chan-fn-map)
+        [ch val] (select! chans)
+        f (get chan-fn-map ch)]
+    (f val)))

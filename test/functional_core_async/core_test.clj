@@ -6,12 +6,19 @@
   (let [ch (chan)]
     (>! ch 1)
     (is (= 1 (<! ch))
-        "Channels block on write and read.")
+        "Channels block on write and read."))
 
+  (let [ch (chan)
+        state (atom [])]
+    (dotimes [_ 3]
+      (future
+        (swap! state conj (<! ch))))
+    (>! ch 1)
     (close! ch)
     (>! ch 2)
-    (is (= nil (<! ch))
-        "Closed channels ignore puts and return nil on take.")))
+    (Thread/sleep 100)
+    (is (= [1 nil nil] @state)
+        "All puts after close! are ignored, takes return nil.")))
 
 
 (deftest scheduler-test

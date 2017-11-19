@@ -10,34 +10,42 @@
   ([width]
    (chan width true))
   ([width fifo?]
-   {:ch (ArrayBlockingQueue. width fifo?)
-    :open? (atom true)}))
+   (atom
+    {:ch (ArrayBlockingQueue. width fifo?)
+     :open? true
+     :waiting-takes 0})))
 
 
 (defn <!
   "Gets something off the channel. Thread safe, blocking."
-  [{:keys [^ArrayBlockingQueue ch open?]}]
-  (when @open?
-    (let [res (.take ch)]
-      (when (not= res ::closed)
-        res))))
+  [chan]
+  (let [{:keys [^ArrayBlockingQueue ch open? waiting-takes]} @chan]
+    (when (or (seq ch) open?)
+      (swap! chan update :waiting-takes inc)
+      (let [res (.take ch)]
+        (swap! chan update :waiting-takes dec)
+        (when-not (= ::closed res)
+          res)))))
 
 
 (defn >!
   "Puts x on the channel. Thread safe, blocking."
-  [{:keys [^ArrayBlockingQueue ch open?]} x]
-  (when (and (some? x)
-             @open?)
-    (.put ch x)))
+  [chan x]
+  (let [{:keys [^ArrayBlockingQueue ch open?]} @chan]
+    (when (and (some? x) open?)
+      (.put ch x)))
+  nil)
 
 
 (defn close!
   "All further puts will be ignored, takes will return nil.
   Thread safe, blocking."
-  [{:keys [^ArrayBlockingQueue ch open?]}]
-  (when @open?
-    (.put ch ::closed)
-    (reset! open? false))
+  [chan]
+  (let [{:keys [^ArrayBlockingQueue ch open? waiting-takes]} @chan]
+    (when (or (seq ch) open?)
+      (swap! chan assoc :open? false)
+      (dotimes [_ waiting-takes]
+        (.put ch ::closed))))
   nil)
 
 
@@ -121,12 +129,11 @@
 ;; ===========
 (defn ^:private poll!
   "Returns value if available in given duration, or ::nil."
-  [{:keys [^ArrayBlockingQueue ch open?]} microseconds]
-  (when @open?
-    (let [res (or (.poll ch microseconds TimeUnit/MICROSECONDS)
-                  ::nil)]
-      (when (and (not= res ::closed))
-        res))))
+  [chan microseconds]
+  (let [{:keys [^ArrayBlockingQueue ch open?]} @chan]
+    (when (or (seq ch) open?)
+      (or (.poll ch microseconds TimeUnit/MICROSECONDS)
+          ::nil))))
 
 
 (defn select!

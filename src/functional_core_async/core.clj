@@ -17,7 +17,7 @@
 (defn <!
   "Gets something off the channel. Thread safe, blocking."
   [{:keys [^ArrayBlockingQueue ch open?]}]
-  (when (or (seq ch) @open?)
+  (when @open?
     (let [res (.take ch)]
       (when (not= res ::closed)
         res))))
@@ -26,7 +26,8 @@
 (defn >!
   "Puts x on the channel. Thread safe, blocking."
   [{:keys [^ArrayBlockingQueue ch open?]} x]
-  (when (and x @open?)
+  (when (and (some? x)
+             @open?)
     (.put ch x)))
 
 

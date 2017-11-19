@@ -96,6 +96,20 @@ We can then call `(<! c)` on that channel to get `massaged-resp`.
 So now we have sequential code instead of nested hell while
 being fully async!
 
+### Polling
+`alts!` can be used to listen on a bunch of channels, and do
+something when you get a value from one of them.
+
+```clojure
+(alts!
+  {(chan)         #(println :chan %)
+   (timeout 1000) #(println :timeout %)})
+```
+This will print ":timeout nil" after 1s.
+
+**NOTE:** The `timeout` function returns a channel that closes after the given time
+in milliseconds.
+
 ## The Hot Dog Machine Process You’ve Been Longing For
 
 Here's a port of the [Hot Dog Machine](https://www.braveclojure.com/core-async/)

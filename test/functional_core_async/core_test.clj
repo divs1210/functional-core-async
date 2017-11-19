@@ -32,15 +32,22 @@
 
 
 (deftest alts-test
-  (let [ch1 (chan)
-        ch2 (chan)
-        res (promise)]
+  (let [res (promise)]
     (go
       (alts!
-       {ch1 #(deliver res [:ch1 %])
-        ch2 #(deliver res [:ch2 %])}))
-    (>! ch2 2)
-    (is (= [:ch2 2] @res)
-        "Select on chans works.")))
+       {(chan)         #(deliver res [:ch %])
+        (timeout 1000) #(deliver res [:to %])}))
+    (is (= [:to nil] @res)
+        "alts! executes timeout function."))
+
+  (let [res (promise)
+        ch (chan)]
+    (go
+      (alts!
+       {ch             #(deliver res [:ch %])
+        (timeout 1000) #(deliver res [:to %])}))
+    (>! ch "hi")
+    (is (= [:ch "hi"] @res)
+        "alts! executes channel function.")))
 
 ;; NOTE: also check out `functional-core-async.examples`

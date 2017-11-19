@@ -117,13 +117,15 @@
       ~@body)))
 
 
-;; ALTS!
-;; =====
+;; POLLING OPS
+;; ===========
 (defn ^:private poll!
+  "Returns value if available in given duration, or ::nil."
   [{:keys [^ArrayBlockingQueue ch open?]} microseconds]
   (when @open?
-    (let [res (.poll ch microseconds TimeUnit/MICROSECONDS)]
-      (when (not= res ::closed)
+    (let [res (or (.poll ch microseconds TimeUnit/MICROSECONDS)
+                  ::nil)]
+      (when (and (not= res ::closed))
         res))))
 
 
@@ -135,7 +137,7 @@
     (doseq [ch (cycle chans)
             :while (not (realized? p))
             :let [res (poll! ch 10)]]
-      (when res
+      (when (not= ::nil res)
         (deliver p [ch res])))
     @p))
 
@@ -150,3 +152,16 @@
         [ch val] (select! chans)
         f (get chan-fn-map ch)]
     (f val)))
+
+
+;; TIMEOUTS
+;; ========
+(defn timeout
+  "Returns a channel that closes after the given
+  duration in milliseconds."
+  [ms]
+  (let [ch (chan)]
+    (future
+      (Thread/sleep ms)
+      (close! ch))
+    ch))

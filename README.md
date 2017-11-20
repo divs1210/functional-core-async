@@ -155,7 +155,7 @@ Let's give it a try:
 ## TODO
 
 * preserve thread-local bindings in `go` blocks
-* implement `alts!`
+* update `alts!` to put with puts
 
 ## License
 

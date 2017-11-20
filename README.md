@@ -101,11 +101,14 @@ being fully async!
 something when you get a value from one of them.
 
 ```clojure
-(alts!
-  {(chan)         #(println :chan %)
-   (timeout 1000) #(println :timeout %)})
+(let [ch (chan)
+      to (timeout 1000)
+      [v c] (alts! [ch to])]
+  (condp = c
+    ch (println :ch v)
+    to (println :timeout)))
 ```
-This will print ":timeout nil" after 1s.
+This will print ":timeout" after 1s, because no value was put on `ch`.
 
 **NOTE:** The `timeout` function returns a channel that closes after the given time
 in milliseconds.

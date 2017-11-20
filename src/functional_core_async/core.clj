@@ -136,7 +136,7 @@
           ::nil))))
 
 
-(defn select!
+(defn alts!
   "Listens on a bunch of channels, and returns
   [ch val] for the first thing that arrives."
   [chans]
@@ -145,18 +145,18 @@
             :while (not (realized? p))
             :let [res (poll! ch 10)]]
       (when (not= ::nil res)
-        (deliver p [ch res])))
+        (deliver p [res ch])))
     @p))
 
 
-(defn alts!
+(defn alt!
   "Takes a map of channels -> functions.
   Listens on channels, and if a value `val`
   is recieved on some `ch`, calls (`f` `val`)
   with the corresponding function `f`."
   [chan-fn-map]
   (let [chans (keys chan-fn-map)
-        [ch val] (select! chans)
+        [val ch] (alts! chans)
         f (get chan-fn-map ch)]
     (f val)))
 

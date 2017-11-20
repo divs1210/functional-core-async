@@ -39,22 +39,14 @@
 
 
 (deftest alts-test
-  (let [res (promise)]
-    (go
-      (alts!
-       {(chan)         #(deliver res [:ch %])
-        (timeout 1000) #(deliver res [:to %])}))
-    (is (= [:to nil] @res)
-        "alts! executes timeout function."))
-
-  (let [res (promise)
-        ch (chan)]
-    (go
-      (alts!
-       {ch             #(deliver res [:ch %])
-        (timeout 1000) #(deliver res [:to %])}))
-    (>! ch "hi")
-    (is (= [:ch "hi"] @res)
-        "alts! executes channel function.")))
+  (let [ch (chan)
+        to (timeout 1000)
+        [v c] (alts! [ch to])
+        res (chan)]
+    (condp = c
+      ch (>! res :ch)
+      to (>! res :to))
+    (is (= :to (<! res))
+        "alts! returns value and channel for the first value that arrives.")))
 
 ;; NOTE: also check out `functional-core-async.examples`

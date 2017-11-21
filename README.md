@@ -1,8 +1,6 @@
 # functional-core-async
 
-A *tiny*, *simple*  implementation of the meat of core.async.
-
-'functional' as in 'it works!' 😀
+More [CPS](https://en.wikipedia.org/wiki/Continuation-passing_style) than [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes).
 
 ## Why
 
@@ -17,13 +15,8 @@ how machinery like `core.async` can be implemented. Read more
 [here](https://groups.google.com/forum/#!topic/clojure/1wmblSTtw2w).
 
 ## Differences from `core.async`
-- `>!` and `<!` are implemented as functions and play nicely with the rest of Clojure
-- `>!!` and `<!!` don't exist - the single bang versions work outside `go` blocks too
-- `go` blocks (lightweight 'threads') are multiplexed over a single JVM thread, but are
-promoted to real JVM threads if they don't complete within 10ms
-- `thread` blocks don't exist because `go` blocks are autopromoted
-- when `core.async` finds a blocking `<!` or `>!` inside a `go` block, that block is 'parked' and does not use up the execution thread,
-whereas in this implementation, the `go` block is promoted to a real thread if it does not complete within 10ms, and the execution thread continues ([more](https://github.com/divs1210/functional-core-async/issues/1))
+- `>!` and `<!` are implemented as functions and take callbacks.
+- `go` blocks (lightweight 'threads') are multiplexed over a single JVM thread. Each can have only one `<!` or `>!`.
 
 ## Usage
 
@@ -54,9 +47,9 @@ which can be escaped with the help of those handy magic portals we talked about.
 (defn async-ch []
   (let [ch (chan)]
     (get-user-from-db :user1
-                      #(>! ch %))
+                      #(>!! ch %))
     (println "but blocks on accessing response :(")
-    (let [resp (<! ch)
+    (let [resp (<!! ch)
           massaged-resp (seq resp)]
       (println "via ch:" massaged-resp)
       massaged-resp)))
@@ -75,16 +68,17 @@ the callback! It's unfortunate that our function has now become blocking, though
 ### Fully Async
 ```clojure
 ;; from examples.clj
-(defn async-ch+go []
+(defn async-ch-go []
   (let [ch (chan)]
-    (get-user-from-db :user2
-                      #(>! ch %))
+    (get-user-from-db :user1
+                      #(>!! ch %))
     (go
-      (let [resp (<! ch)
-            massaged-resp (seq resp)]
-        (println "via go ch:" massaged-resp)
-        (println "and didn't block!")
-        massaged-resp))))
+      (<! ch
+          #(let [resp %
+                 massaged-resp (seq resp)]
+             (println "via ch/go:" massaged-resp)
+             (println "and didn't block!")
+             massaged-resp)))))
 ```
 
 This version is only slightly different to the previous one.
@@ -92,73 +86,54 @@ We put the fn body after the async call to the database inside
 a `go` block, which is executed on the `async-executor` thread,
 immediately returning a channel.
 
-We can then call `(<! c)` on that channel to get `massaged-resp`.
+We can then call `(<!! c)` on that channel to get `massaged-resp`.
 So now we have sequential code instead of nested hell while
 being fully async!
-
-### Polling
-`alts!` can be used to listen on a bunch of channels, and do
-something when you get a value from one of them.
-
-```clojure
-(let [ch (chan)
-      to (timeout 1000)
-      [v c] (alts! [ch to])]
-  (condp = c
-    ch (println :ch v)
-    to (println :timeout)))
-```
-This will print ":timeout" after 1s, because no value was put on `ch`.
-
-**NOTE:** The `timeout` function returns a channel that closes after the given time
-in milliseconds.
 
 ## The Hot Dog Machine Process You’ve Been Longing For
 
 Here's a port of the [Hot Dog Machine](https://www.braveclojure.com/core-async/)
 
 ```clojure
-(defn hot-dog-machine-v2
-  [hot-dog-count]
-  (let [in (chan)
-        out (chan)]
-    (go (loop [hc hot-dog-count]
-          (if (> hc 0)
-            (let [input (<! in)]
-             (if (= 3 input)
-                (do (>! out "hot dog")
-                    (recur (dec hc)))
-                (do (>! out "wilted lettuce")
-                    (recur hc))))
-           (do (close! in)
-               (close! out)))))
-    [in out]))
+(defn hot-dog-machine
+  ([hotdog-count]
+   (let [in (chan)
+         out (chan)]
+     (hot-dog-machine in out hotdog-count)
+     [in out]))
+  ([in out hc]
+   (when (> hc 0)
+     (go
+       (<! in
+           #(let [input %]
+              (if (= 3 input)
+                (go (>! out "hot dog"
+                        (go (hot-dog-machine in out (dec hc)))))
+                (go (>! out "wilted lettuce"
+                        (go (hot-dog-machine in out hc)))))))))))
 ```
 
 Let's give it a try:
 ```clojure
-(let [[in out] (hot-dog-machine-v2 2)]
-  (>! in "pocket lint")
-  (println (<! out))
+(let [[in out] (hot-dog-machine 2)]
+  (>!! in "pocket lint")
+  (println (<!! out))
 
-  (>! in 3)
-  (println (<! out))
+  (>!! in 3)
+  (println (<!! out))
 
-  (>! in 3)
-  (println (<! out))
-
-  (>! in 3)
-  (<! out))
+  (>!! in 3)
+  (println (<!! out)))
 ; => wilted lettuce
 ; => hotdog
 ; => hotdog
-; => nil
 ```
 
 ## TODO
 
 * preserve thread-local bindings in `go` blocks
-* update `alts!` to put with puts
+* `alts!`
+* `multi!` macro for nested `go` blocks
 
 ## License
 

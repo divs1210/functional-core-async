@@ -32,30 +32,28 @@
   (.put ch x))
 
 
-(defmacro async-take
+(defn <!
   "Executes body when something is received from the channel.
   Can be used only within `go` blocks!"
-  [[v ch] & body]
-  ^{:type ::async-take}
+  [ch body-fn]
+  ^{:type ::<!}
   {:ch ch
-   :fn `(fn [~v]
-          ~@body)})
+   :fn body-fn})
 
 
-(defmacro async-put
+(defn >!
   "Executes body when v is put on the channel.
   Can be used only within `go` blocks!"
-  [[ch v] & body]
-  ^{:type ::async-put}
+  [ch v body-fn]
+  ^{:type ::>!}
   {:ch ch
-   :fn `(fn []
-          ~@body)
+   :fn body-fn
    :val v})
 
 
 ;; ASYNC EVENT LOOP
 ;; ================
-(def ^:private async-ch
+(defonce ^:private async-ch
   ;; 1M `go` blocks at a time
   (chan 1000000 false))
 
@@ -69,38 +67,40 @@
   nil)
 
 
-(defn ^:private execute []
-  (let [[f ok] (<!! async-ch)] ;; pick job if available
-    (try
-      (let [res (f)]
-        (case (type res)
-          ::async-take
-          (let [chan (:ch res)]
-            (let [v (poll! chan 10)]
-              (if-not (= ::nil v)
-                (ok ((:fn res) v))
-                (schedule-async (fn [] res) ok))))
+(defn ^:private execute
+  "Wait for, pick up, and execute one job
+  from the job queue."
+  []
+  (let [[f ok] (<!! async-ch)
+        res (f)]
+    (case (type res)
+      ::<!
+      (let [chan (:ch res)]
+        (let [v (poll! chan 10)]
+          (if-not (= ::nil v)
+            (ok ((:fn res) v))
+            (schedule-async (fn [] res) ok))))
 
-          ::async-put
-          (let [chan (:ch res)
-                val (:val res)]
-            (if (pos? (.remainingCapacity (:ch @chan)))
-              (do
-                (>!! chan val)
-                (ok ((:fn res) val)))
-              (schedule-async (fn [] res) ok)))
+      ::>!
+      (let [chan (:ch res)
+            val (:val res)]
+        (if (pos? (.remainingCapacity (:ch @chan)))
+          (do
+            (>!! chan val)
+            (ok ((:fn res))))
+          (schedule-async (fn [] res) ok)))
 
-          ;; else
-          (ok res)))
-      (catch Exception e
-        (.printStackTrace e)))))
+      ;; else
+      (ok res))))
 
 
-(def ^:private async-executor
+(defonce ^:private async-executor
   (future
-    (loop []
-      (execute)
-      (recur))))
+    (while true
+      (try
+        (execute)
+        (catch Exception e
+          (.printStackTrace e))))))
 
 
 ;; Lightweight Threads
@@ -125,21 +125,6 @@
   `(go*
     (fn []
       ~@body)))
-
-
-;; POLLING OPS
-;; ===========
-(defn alts!
-  "Listens on a bunch of channels, and returns
-  [ch val] for the first thing that arrives."
-  [chans]
-  (let [p (promise)]
-    (doseq [ch (cycle chans)
-            :while (not (realized? p))
-            :let [res (poll! ch 10)]]
-      (when (not= ::nil res)
-        (deliver p [res ch])))
-    @p))
 
 
 ;; TIMEOUTS

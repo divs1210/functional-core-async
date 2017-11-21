@@ -27,11 +27,8 @@
 
   (let [ch (chan)
         res (promise)]
-    (go
-      (async-take [v ch]
-        (deliver res v)))
-    (go
-      (>!! ch 42))
+    (go (<! ch #(deliver res %)))
+    (go (>!! ch 42))
     (is (= 42 @res)
         "go blocks should not block each other.")))
 

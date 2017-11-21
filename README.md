@@ -82,6 +82,18 @@ the callback! It's unfortunate that our function has now become blocking, though
              (println "and didn't block!")
              massaged-resp)))))
 ```
+which can be written simply as
+```clojure
+(defn async-ch-go []
+  (let [ch (chan)]
+    (get-user-from-db :user1
+                      #(>!! ch %))
+    (go<! [resp ch]
+      (let [massaged-resp (seq resp)]
+        (println "via ch/go:" massaged-resp)
+        (println "and didn't block!")
+        massaged-resp))))
+```
 
 This version is only slightly different to the previous one.
 We put the fn body after the async call to the database inside
@@ -108,9 +120,6 @@ Here's a port of the [Hot Dog Machine](https://www.braveclojure.com/core-async/)
           (go>! [out "wilted lettuce"]
             (recurse hc)))))))
 ```
-
-where `go<!`/`go>!` is some syntax sugar to help with our skin-deep `go` macro.
-
 Let's give it a try:
 ```clojure
 (let [in (chan)

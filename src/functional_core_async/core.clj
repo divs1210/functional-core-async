@@ -60,7 +60,7 @@
   (chan 1000000 false))
 
 
-(defn ^:private schedule-async
+(defn schedule-async
   "Puts a job on the asynchronous job queue.
   `f`: a 0-arity fn to be run asynchronously
   `ok`: callback called with the result of (f)"

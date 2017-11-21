@@ -4,36 +4,24 @@
 
 (deftest channel-test
   (let [ch (chan)]
-    (>! ch 1)
-    (is (= 1 (<! ch))
-        "Channels block on write and read."))
-
-  (let [ch (chan)
-        state (atom [])]
-    (dotimes [_ 3]
-      (future
-        (swap! state conj (<! ch))))
-    (>! ch 1)
-    (close! ch)
-    (>! ch 2)
-    (Thread/sleep 100)
-    (is (= [1 nil nil] @state)
-        "All puts after close! are ignored, takes return nil.")))
+    (>!! ch 1)
+    (is (= 1 (<!! ch))
+        "Channels block on write and read.")))
 
 
 (deftest scheduler-test
   (let [ch (chan)]
     (schedule-async #(inc 1)
-                    #(>! ch %))
-    (is (= 2 (<! ch))
+                    #(>!! ch %))
+    (is (= 2 (<!! ch))
         "Channel should have return value.")))
 
 
 (deftest go-test
   (let [ch (chan)
         res (promise)]
-    (go (deliver res (<! ch)))
-    (>! ch 1)
+    (go (deliver res (<!! ch)))
+    (>!! ch 1)
     (is (= 1 @res)
         "go blocks should be async.")))
 
@@ -44,9 +32,9 @@
         [v c] (alts! [ch to])
         res (chan)]
     (condp = c
-      ch (>! res :ch)
-      to (>! res :to))
-    (is (= :to (<! res))
+      ch (>!! res :ch)
+      to (>!! res :to))
+    (is (= :to (<!! res))
         "alts! returns value and channel for the first value that arrives.")))
 
 ;; NOTE: also check out `functional-core-async.examples`

@@ -125,16 +125,3 @@
   `(go*
     (fn []
       ~@body)))
-
-
-;; TIMEOUTS
-;; ========
-(defn timeout
-  "Returns a channel that contains ::nil after
-  the given duration in milliseconds."
-  [ms]
-  (let [ch (chan)]
-    (future
-      (Thread/sleep ms)
-      (>!! ch ::timeout))
-    ch))

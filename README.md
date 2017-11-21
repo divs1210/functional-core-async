@@ -82,7 +82,7 @@ the callback! It's unfortunate that our function has now become blocking, though
              (println "and didn't block!")
              massaged-resp)))))
 ```
-which can be written simply as
+which can also be written as
 ```clojure
 (defn async-ch-go []
   (let [ch (chan)]

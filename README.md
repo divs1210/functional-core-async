@@ -22,8 +22,8 @@ how machinery like `core.async` can be implemented. Read more
 - `go` blocks (lightweight 'threads') are multiplexed over a single JVM thread, but are
 promoted to real JVM threads if they don't complete within 10ms
 - `thread` blocks don't exist because `go` blocks are autopromoted
-- there are cases where `core.async` can run two `go` blocks on the same thread, while
-this implementation will have to move one of them to another thread ([more](https://github.com/divs1210/functional-core-async/issues/1))
+- when `core.async` finds a blocking `<!` or `>!` inside a `go` block, that block is 'parked' and does not use up the execution thread,
+whereas in this implementation, the `go` block is promoted to a real thread if it does not complete within 10ms, and the execution thread continues ([more](https://github.com/divs1210/functional-core-async/issues/1))
 
 ## Usage
 

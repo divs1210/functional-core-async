@@ -16,7 +16,8 @@ how machinery like `core.async` can be implemented. Read more
 
 ## Differences from `core.async`
 - `>!` and `<!` are implemented as functions and take callbacks.
-- `go` blocks (lightweight 'threads') are multiplexed over a single JVM thread. Each can have only one `<!` or `>!`.
+These should be top-level in their `go` blocks.
+- `go` blocks (lightweight 'threads') are multiplexed over a single JVM thread.
 
 ## Usage
 
@@ -97,27 +98,24 @@ Here's a port of the [Hot Dog Machine](https://www.braveclojure.com/core-async/)
 
 ```clojure
 (defn hot-dog-machine
-  ([hotdog-count]
-   (let [in (chan)
-         out (chan)]
-     (hot-dog-machine in out hotdog-count)
-     [in out]))
-  ([in out hc]
-   (let [recurse (fn [hc] #(go (hot-dog-machine in out hc)))]
-     (when (> hc 0)
-       (go
-         (<! in
-             #(let [input %]
-                (if (= 3 input)
-                  (go (>! out "hot dog"
-                          (recurse (dec hc))))
-                  (go (>! out "wilted lettuce"
-                          (recurse hc)))))))))))
+  [in out hc]
+  (let [recurse #(go (hot-dog-machine in out %))]
+    (when (> hc 0)
+      (go<! [input in]
+        (if (= 3 input)
+          (go>! [out "hot dog"]
+            (recurse (dec hc)))
+          (go>! [out "wilted lettuce"]
+            (recurse hc)))))))
 ```
+
+where `go<!`/`go>!` is some syntax sugar to help with our skin-deep `go` macro.
 
 Let's give it a try:
 ```clojure
-(let [[in out] (hot-dog-machine 2)]
+(let [in (chan)
+      out (chan)
+      _ (hot-dog-machine in out 2)]
   (>!! in "pocket lint")
   (println (<!! out))
 

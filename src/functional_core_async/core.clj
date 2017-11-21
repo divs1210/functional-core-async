@@ -13,6 +13,8 @@
    (ArrayBlockingQueue. width fifo?)))
 
 
+;; BLOCKING CHANNEL OPS
+;; ====================
 (defn ^:private poll!
   "Returns value if available in given duration, or ::nil."
   [^ArrayBlockingQueue ch microseconds]
@@ -30,25 +32,6 @@
   "Puts x on the channel. Thread safe, blocking."
   [^ArrayBlockingQueue ch x]
   (.put ch x))
-
-
-(defn <!
-  "Executes body when something is received from the channel.
-  Can be used only within `go` blocks!"
-  [ch body-fn]
-  ^{:type ::<!}
-  {:ch ch
-   :fn body-fn})
-
-
-(defn >!
-  "Executes body when v is put on the channel.
-  Can be used only within `go` blocks!"
-  [ch v body-fn]
-  ^{:type ::>!}
-  {:ch ch
-   :fn body-fn
-   :val v})
 
 
 ;; ASYNC EVENT LOOP
@@ -121,3 +104,38 @@
   `(go*
     (fn []
       ~@body)))
+
+
+;; ASYNC CHANNEL OPS
+;; =================
+(defn <!
+  "Executes body when something is received from the channel.
+  Can be used only within `go` blocks!"
+  [ch body-fn]
+  ^{:type ::<!}
+  {:ch ch
+   :fn body-fn})
+
+
+(defn >!
+  "Executes body when v is put on the channel.
+  Can be used only within `go` blocks!"
+  [ch v body-fn]
+  ^{:type ::>!}
+  {:ch ch
+   :fn body-fn
+   :val v})
+
+
+(defmacro go<!
+  "Takes something from ch and puts it in v.
+  Returns a channel."
+  [[v ch] & body]
+  `(go (<! ~ch (fn [~v] ~@body))))
+
+
+(defmacro go>!
+  "Puts v on ch.
+  Returns a channel."
+  [[ch v] & body]
+  `(go (>! ~ch ~v (fn [] ~@body))))

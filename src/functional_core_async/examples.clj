@@ -59,3 +59,29 @@
              (println "via ch/go:" massaged-resp)
              (println "and can access outside :)")
              massaged-resp)))))
+
+
+;; HOT DOG MACHINE
+;; ===============
+(defn hot-dog-machine
+  [in out hc]
+  (let [recurse #(go (hot-dog-machine in out %))]
+    (when (> hc 0)
+      (go<! [input in]
+        (if (= 3 input)
+          (go>! [out "hot dog"]
+            (recurse (dec hc)))
+          (go>! [out "wilted lettuce"]
+            (recurse hc)))))))
+
+#_(let [in (chan)
+      out (chan)
+      _ (hot-dog-machine in out 2)]
+  (>!! in "pocket lint")
+  (println (<!! out))
+
+  (>!! in 3)
+  (println (<!! out))
+
+  (>!! in 3)
+  (println (<!! out)))

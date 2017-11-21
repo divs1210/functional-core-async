@@ -10,95 +10,97 @@
   ([width]
    (chan width true))
   ([width fifo?]
-   (atom
-    {:ch (ArrayBlockingQueue. width fifo?)
-     :open? true
-     :waiting-takes 0})))
+   (ArrayBlockingQueue. width fifo?)))
 
 
-(defn <!
+(defn ^:private poll!
+  "Returns value if available in given duration, or ::nil."
+  [^ArrayBlockingQueue ch microseconds]
+  (or (.poll ch microseconds TimeUnit/MICROSECONDS)
+      ::nil))
+
+
+(defn <!!
   "Gets something off the channel. Thread safe, blocking."
-  [chan]
-  (let [{:keys [^ArrayBlockingQueue ch open? waiting-takes]} @chan]
-    (when (or (seq ch) open?)
-      (swap! chan update :waiting-takes inc)
-      (let [res (.take ch)]
-        (swap! chan update :waiting-takes dec)
-        (when-not (= ::closed res)
-          res)))))
+  [^ArrayBlockingQueue ch]
+  (.take ch))
 
 
-(defn >!
+(defn >!!
   "Puts x on the channel. Thread safe, blocking."
-  [chan x]
-  (let [{:keys [^ArrayBlockingQueue ch open?]} @chan]
-    (when (and (some? x) open?)
-      (.put ch x)))
-  nil)
+  [^ArrayBlockingQueue ch x]
+  (.put ch x))
 
 
-(defn close!
-  "All further puts will be ignored, takes will return nil.
-  Thread safe, blocking."
-  [chan]
-  (let [{:keys [^ArrayBlockingQueue ch open? waiting-takes]} @chan]
-    (when (or (seq ch) open?)
-      (swap! chan assoc :open? false)
-      (dotimes [_ waiting-takes]
-        (.put ch ::closed))))
-  nil)
+(defmacro async-take
+  "Executes body when something is received from the channel.
+  Can be used only within `go` blocks!"
+  [[v ch] & body]
+  ^{:type ::async-take}
+  {:ch ch
+   :fn `(fn [~v]
+          ~@body)})
+
+
+(defmacro async-put
+  "Executes body when v is put on the channel.
+  Can be used only within `go` blocks!"
+  [[ch v] & body]
+  ^{:type ::async-put}
+  {:ch ch
+   :fn `(fn []
+          ~@body)
+   :val v})
 
 
 ;; ASYNC EVENT LOOP
 ;; ================
-(defonce ^:private async-ch
+(def ^:private async-ch
   ;; 1M `go` blocks at a time
   (chan 1000000 false))
 
 
-(defn ^:private async-executor
-  "Starts an execution thread and a monitor thread.
-  If the currently executing task takes more than 10ms,
-  the monitor will retire the execution thread, and
-  it will be dedicated to the task at hand, after which
-  both these threads will die."
-  []
-  (let [retired? (promise)
-        check-status? (chan)
-        status-promise (atom nil)]
-    (future ;; monitor thread
-      (while (not (realized? retired?))
-        (when (<! check-status?)
-          (let [status (deref @status-promise 10 :timeout)]
-            (when (= :timeout status)
-              (deliver retired? true))))))
-    (future ;; execution thread
-      (while (not (realized? retired?))
-        (let [[f ok] (<! async-ch)]   ;; pick job if available
-          (reset! status-promise (promise))
-          (>! check-status? true)
-          (try
-            (ok (f)) ;; execute job and call the `ok` callback with the result
-            (catch Exception e
-              (.printStackTrace e)))
-          (deliver @status-promise :done))))
-    retired?))
-
-
-(defonce ^:private supervised-async-executor
-  (future ;; starts a new executor if the existing one retires
-    (loop [retired? (async-executor)]
-      @retired?
-      (recur (async-executor)))))
-
-
-(defn schedule-async
+(defn ^:private schedule-async
   "Puts a job on the asynchronous job queue.
   `f`: a 0-arity fn to be run asynchronously
   `ok`: callback called with the result of (f)"
   [f ok]
-  (>! async-ch [f ok])
+  (>!! async-ch [f ok])
   nil)
+
+
+(defn ^:private execute []
+  (let [[f ok] (<!! async-ch)] ;; pick job if available
+    (try
+      (let [res (f)]
+        (case (type res)
+          ::async-take
+          (let [chan (:ch res)]
+            (let [v (poll! chan 10)]
+              (if-not (= ::nil v)
+                (ok ((:fn res) v))
+                (schedule-async (fn [] res) ok))))
+
+          ::async-put
+          (let [chan (:ch res)
+                val (:val res)]
+            (if (pos? (.remainingCapacity (:ch @chan)))
+              (do
+                (>!! chan val)
+                (ok ((:fn res) val)))
+              (schedule-async (fn [] res) ok)))
+
+          ;; else
+          (ok res)))
+      (catch Exception e
+        (.printStackTrace e)))))
+
+
+(def ^:private async-executor
+  (future
+    (loop []
+      (execute)
+      (recur))))
 
 
 ;; Lightweight Threads
@@ -110,7 +112,7 @@
   separate thread."
   [f]
   (let [ch (chan)]
-    (schedule-async f #(>! ch %))
+    (schedule-async f #(>!! ch %))
     ch))
 
 
@@ -127,15 +129,6 @@
 
 ;; POLLING OPS
 ;; ===========
-(defn ^:private poll!
-  "Returns value if available in given duration, or ::nil."
-  [chan microseconds]
-  (let [{:keys [^ArrayBlockingQueue ch open?]} @chan]
-    (when (or (seq ch) open?)
-      (or (.poll ch microseconds TimeUnit/MICROSECONDS)
-          ::nil))))
-
-
 (defn alts!
   "Listens on a bunch of channels, and returns
   [ch val] for the first thing that arrives."
@@ -149,26 +142,14 @@
     @p))
 
 
-(defn alt!
-  "Takes a map of channels -> functions.
-  Listens on channels, and if a value `val`
-  is recieved on some `ch`, calls (`f` `val`)
-  with the corresponding function `f`."
-  [chan-fn-map]
-  (let [chans (keys chan-fn-map)
-        [val ch] (alts! chans)
-        f (get chan-fn-map ch)]
-    (f val)))
-
-
 ;; TIMEOUTS
 ;; ========
 (defn timeout
-  "Returns a channel that closes after the given
-  duration in milliseconds."
+  "Returns a channel that contains ::nil after
+  the given duration in milliseconds."
   [ms]
   (let [ch (chan)]
     (future
       (Thread/sleep ms)
-      (close! ch))
+      ::nil)
     ch))

@@ -103,15 +103,16 @@ Here's a port of the [Hot Dog Machine](https://www.braveclojure.com/core-async/)
      (hot-dog-machine in out hotdog-count)
      [in out]))
   ([in out hc]
-   (when (> hc 0)
-     (go
-       (<! in
-           #(let [input %]
-              (if (= 3 input)
-                (go (>! out "hot dog"
-                        (go (hot-dog-machine in out (dec hc)))))
-                (go (>! out "wilted lettuce"
-                        (go (hot-dog-machine in out hc)))))))))))
+   (let [recurse (fn [hc] #(go (hot-dog-machine in out hc)))]
+     (when (> hc 0)
+       (go
+         (<! in
+             #(let [input %]
+                (if (= 3 input)
+                  (go (>! out "hot dog"
+                          (recurse (dec hc))))
+                  (go (>! out "wilted lettuce"
+                          (recurse hc)))))))))))
 ```
 
 Let's give it a try:

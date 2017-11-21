@@ -17,7 +17,7 @@ how machinery like `core.async` can be implemented. Read more
 ## Differences from `core.async`
 - `>!` and `<!` are implemented as functions and take callbacks.
 These should be top-level in their `go` blocks.
-- `go` blocks (lightweight 'threads') are multiplexed over a single JVM thread.
+- `go` blocks (lightweight 'threads') are multiplexed over n Clojure `future`s, where n = number of cores.
 
 ## Usage
 

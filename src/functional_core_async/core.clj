@@ -80,7 +80,7 @@
     (case (type res)
       ::<!
       (let [chan (:ch res)]
-        (let [v (poll! chan 10)]
+        (let [v (poll! chan 1000)]
           (if-not (= ::nil v)
             (ok ((:fn res) v))
             (schedule-async (fn [] res) ok))))
@@ -88,7 +88,8 @@
       ::>!
       (let [chan (:ch res)
             val (:val res)]
-        (if (pos? (.remainingCapacity chan))
+        (if (locking chan
+              (pos? (.remainingCapacity chan)))
           (do
             (>!! chan val)
             (ok ((:fn res))))
@@ -98,13 +99,16 @@
       (ok res))))
 
 
-(defonce ^:private async-executor
-  (future
-    (while true
-      (try
-        (execute)
-        (catch Exception e
-          (.printStackTrace e))))))
+(defonce ^:private async-executors
+  (let [cores (.availableProcessors (Runtime/getRuntime))]
+    (doall
+     (for [_ (range cores)]
+       (future
+         (while true
+           (try
+             (execute)
+             (catch Exception e
+               (.printStackTrace e)))))))))
 
 
 ;; Lightweight Threads

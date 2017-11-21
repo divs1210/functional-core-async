@@ -23,7 +23,17 @@
     (go (deliver res (<!! ch)))
     (>!! ch 1)
     (is (= 1 @res)
-        "go blocks should be async.")))
+        "go blocks should be async."))
+
+  (let [ch (chan)
+        res (promise)]
+    (go
+      (async-take [v ch]
+        (deliver res v)))
+    (go
+      (>!! ch 42))
+    (is (= 42 @res)
+        "go blocks should not block each other.")))
 
 
 (deftest alts-test

@@ -151,5 +151,5 @@
   (let [ch (chan)]
     (future
       (Thread/sleep ms)
-      ::nil)
+      (>!! ch ::timeout))
     ch))

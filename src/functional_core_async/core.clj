@@ -34,6 +34,27 @@
   (.put ch x))
 
 
+;; ASYNC CHANNEL OPS
+;; =================
+(defn <!
+  "Executes body when something is received from the channel.
+  Can be used only within `go` blocks!"
+  [ch body-fn]
+  ^{:type ::<!}
+  {:ch ch
+   :fn body-fn})
+
+
+(defn >!
+  "Executes body when v is put on the channel.
+  Can be used only within `go` blocks!"
+  [ch v body-fn]
+  ^{:type ::>!}
+  {:ch ch
+   :fn body-fn
+   :val v})
+
+
 ;; ASYNC EVENT LOOP
 ;; ================
 (defonce ^:private async-ch
@@ -101,30 +122,7 @@
   "Executes the body on the `async-executor` thread,
   returning a channel that gives the returned value."
   [& body]
-  `(go*
-    (fn []
-      ~@body)))
-
-
-;; ASYNC CHANNEL OPS
-;; =================
-(defn <!
-  "Executes body when something is received from the channel.
-  Can be used only within `go` blocks!"
-  [ch body-fn]
-  ^{:type ::<!}
-  {:ch ch
-   :fn body-fn})
-
-
-(defn >!
-  "Executes body when v is put on the channel.
-  Can be used only within `go` blocks!"
-  [ch v body-fn]
-  ^{:type ::>!}
-  {:ch ch
-   :fn body-fn
-   :val v})
+  `(go* (fn [] ~@body)))
 
 
 (defmacro go<!

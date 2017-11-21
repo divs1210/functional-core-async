@@ -84,7 +84,7 @@
       ::>!
       (let [chan (:ch res)
             val (:val res)]
-        (if (pos? (.remainingCapacity (:ch @chan)))
+        (if (pos? (.remainingCapacity chan))
           (do
             (>!! chan val)
             (ok ((:fn res))))

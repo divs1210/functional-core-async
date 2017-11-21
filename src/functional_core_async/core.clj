@@ -107,9 +107,7 @@
 ;; ===================
 (defn go*
   "Evaluates (f) on the `async-executor` thread,
-  returning a channel that gives the returned value.
-  If it takes more than 10ms, will be promoted to a
-  separate thread."
+  returning a channel that gives the returned value."
   [f]
   (let [ch (chan)]
     (schedule-async f #(>!! ch %))
@@ -118,9 +116,7 @@
 
 (defmacro go
   "Executes the body on the `async-executor` thread,
-  returning a channel that gives the returned value.
-  If it takes more than 10ms, will be promoted to a
-  separate thread."
+  returning a channel that gives the returned value."
   [& body]
   `(go*
     (fn []

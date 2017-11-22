@@ -1,23 +1,36 @@
+```
+He had found a Nutri-Matic machine which had provided him with
+a plastic cup filled with a liquid that was almost, but not quite,
+entirely unlike tea.
+
+The way it functioned was very interesting. When the Drink button
+was pressed it made an instant but highly detailed examination of
+the subject's taste buds, a spectroscopic analysis of the subject's
+metabolism and then sent tiny experimental signals down the neural
+pathways to the taste centers of the subject's brain to see what
+was likely to go down well. However, no one knew quite why it did
+this because it invariably delivered a cupful of liquid that was
+almost, but not quite, entirely unlike tea.
+```
+*from The Hitchhiker's Guide to the Galaxy*
+
 # functional-core-async
 
 More [CPS](https://en.wikipedia.org/wiki/Continuation-passing_style) than [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes).
 
 ## Why
 
-[core.async](https://github.com/clojure/core.async) is a great tool.
+- It makes writing concurrent software much simpler by getting data out of callbacks
+through the use of magic portals called `channels`.
+- It provides green threads via `go` blocks that can park and be multiplexed over JVM threads,
+and communicate over channels.
+- It can be ported to other systems and languages in a rather straightforward manner.
+For example, here is [a javascript port](https://github.com/divs1210/coroutines.js).
 
-It makes writing concurrent software much simpler by getting data out
-of callbacks through the use of magic portals called `channels`. This
-is a minimal implementation using an event loop and functions.
-
-**NOTE:** This is an experimental project through which I want to explore
-how machinery like `core.async` can be implemented. Read more
-[here](https://groups.google.com/forum/#!topic/clojure/1wmblSTtw2w).
-
-## Differences from `core.async`
-- `>!` and `<!` are implemented as functions and take callbacks.
-These should be top-level in their `go` blocks.
-- `go` blocks (lightweight 'threads') are multiplexed over n Clojure `future`s, where n = number of cores.
+## Differences from [`core.async`](https://github.com/clojure/core.async)
+- `>!` and `<!` are implemented as functions and take callbacks. These should be top-level in their `go` blocks.
+- `go` blocks (green 'threads') are multiplexed over n Clojure `future`s, where n = number of cores.
+- the `go` macro can only park a single `>!` or `<!` that is returned from its body.
 
 ## Usage
 

@@ -123,15 +123,15 @@ Here's a port of the [Hot Dog Machine](https://www.braveclojure.com/core-async/)
 
 ```clojure
 (defn hot-dog-machine
-  [in out hc]
+  [in out hot-dogs-left]
   (let [recurse #(go (hot-dog-machine in out %))]
-    (when (> hc 0)
+    (when (> hot-dogs-left 0)
       (go<! [input in]
         (if (= 3 input)
           (go>! [out "hot dog"]
-            (recurse (dec hc)))
+            (recurse (dec hot-dogs-left)))
           (go>! [out "wilted lettuce"]
-            (recurse hc)))))))
+            (recurse hot-dogs-left)))))))
 ```
 Let's give it a try:
 ```clojure

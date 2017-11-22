@@ -16,7 +16,7 @@ almost, but not quite, entirely unlike tea.
 
 # functional-core-async
 
-More [CPS](https://en.wikipedia.org/wiki/Continuation-passing_style) than [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes).
+Green (cooperative) threads for the JVM and beyond!
 
 ## Why
 

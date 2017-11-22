@@ -79,11 +79,11 @@
         res (f)]
     (case (type res)
       ::<!
-      (let [chan (:ch res)]
-        (let [v (poll! chan 1000)]
-          (if-not (= ::nil v)
-            (ok ((:fn res) v))
-            (schedule-async (fn [] res) ok))))
+      (let [chan (:ch res)
+            v (poll! chan 1000)]
+        (if-not (= ::nil v)
+          (ok ((:fn res) v))
+          (schedule-async (fn [] res) ok)))
 
       ::>!
       (let [chan (:ch res)

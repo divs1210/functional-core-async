@@ -28,7 +28,7 @@ and communicate over channels.
 For example, here is [a javascript port](https://github.com/divs1210/coroutines.js).
 
 ## Differences from [`core.async`](https://github.com/clojure/core.async)
-- CSP - S: making callbacky code look sequential requires access to compiler
+- CSP - S: making callbacky code look sequential requires access to compiler. This is avoided to aid portability.
 - `>!` and `<!` are implemented as functions and take callbacks. These should be top-level in their `go` blocks.
 - `go` blocks (green 'threads') are multiplexed over n Clojure `future`s, where n = number of cores.
 - the `go` macro can only park a single `>!` or `<!` that is returned from its body.
@@ -155,6 +155,7 @@ Let's give it a try:
 
 * preserve thread-local bindings in `go` blocks
 * optimize scheduler: replace round-robin scheduling with per-channel queues and listeners
+* `close!`
 * `goproduce`/`goconsume`
 * `alts!`
 

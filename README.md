@@ -153,8 +153,9 @@ Let's give it a try:
 ## TODO
 
 * preserve thread-local bindings in `go` blocks
+* optimize scheduler: replace round-robin scheduling with per-channel queues and listeners
+* `goproduce`/`goconsume`
 * `alts!`
-* `multi!` macro for nested `go` blocks
 
 ## License
 

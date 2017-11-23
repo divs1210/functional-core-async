@@ -16,7 +16,7 @@ almost, but not quite, entirely unlike tea.
 
 # functional-core-async
 
-Green (cooperative) threads for the JVM and beyond!
+CSP - S = Communicating Processes = Green Threads!
 
 ## Why
 
@@ -28,6 +28,7 @@ and communicate over channels.
 For example, here is [a javascript port](https://github.com/divs1210/coroutines.js).
 
 ## Differences from [`core.async`](https://github.com/clojure/core.async)
+- CSP - S: making callbacky code look sequential requires access to compiler
 - `>!` and `<!` are implemented as functions and take callbacks. These should be top-level in their `go` blocks.
 - `go` blocks (green 'threads') are multiplexed over n Clojure `future`s, where n = number of cores.
 - the `go` macro can only park a single `>!` or `<!` that is returned from its body.

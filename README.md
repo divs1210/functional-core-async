@@ -33,6 +33,10 @@ For example, here is [a javascript port](https://github.com/divs1210/coroutines.
 - `go` blocks (green 'threads') are multiplexed over n Clojure `future`s, where n = number of cores.
 - the `go` macro can only park a single `>!` or `<!` that is returned from its body.
 
+## Intro Video
+
+Currently the JS implementation is far ahead of this implementation. You can see a demo of it [here](https://www.youtube.com/watch?v=bjQenG-gcME).
+
 ## Usage
 
 Let's look at an everyday async call to the database to fetch a string

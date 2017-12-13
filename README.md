@@ -155,12 +155,13 @@ Let's give it a try:
 ; => hotdog
 ```
 
+There's also `goloop` and `goconsume`. Read the source to know more!
+
 ## TODO
 
 * preserve thread-local bindings in `go` blocks
 * optimize scheduler: replace round-robin scheduling with per-channel queues and listeners
 * `close!`
-* `goproduce`/`goconsume`
 * `alts!`
 
 ## License

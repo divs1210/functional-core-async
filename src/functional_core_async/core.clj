@@ -141,3 +141,44 @@
   Returns a channel."
   [[ch v] & body]
   `(go (>! ~ch ~v (fn [] ~@body))))
+
+
+(defn goloop*
+  "Calls (f gorecur initial-state).
+  f can call (gorecur state) to loop."
+  [f initial-state]
+  (letfn [(gorecur [& [state]]
+            (goloop* f state))]
+    (go
+      (f gorecur initial-state))))
+
+
+(defmacro goloop
+  "Like `loop`, but runs each iteration
+  on a separate go block, and doesn't
+  block the main thread.
+  Call (gorecur state) in body to loop."
+  [[var initial-state] & body]
+  `(goloop* (fn [~'gorecur ~var]
+              ~@body)
+            ~initial-state))
+
+
+(defn goconsume*
+  "Calls (f v gorecur) when v is
+  received on ch.
+  f can call (gorecur) to wait for
+  another v on ch."
+  [ch f]
+  (goloop [_ nil]
+    (go<! [v ch]
+      (f v gorecur))))
+
+
+(defmacro goconsume
+  "Like `go<!`, but body can call
+  (gorecur) to loop."
+  [[var ch] & body]
+  `(goconsume* ~ch
+               (fn [~var ~'gorecur]
+                 ~@body)))
